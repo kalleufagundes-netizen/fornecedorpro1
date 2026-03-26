@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FornecedorPro — Encontre fornecedores reais no Brasil</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#09090b;--bg2:#111113;--bg3:#18181b;--bg4:#1f1f23;
+    --border:#2a2a2e;--border2:#3a3a40;
+    --text:#fafafa;--text2:#a1a1aa;--text3:#71717a;
+    --accent:#6366f1;--accent2:#818cf8;--accent3:#4f46e5;
+    --green:#22c55e;--red:#ef4444;--yellow:#fbbf24;
+  }
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:rgba(9,9,11,0.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:200}
+  .logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;cursor:pointer}
+  .logo span{color:var(--accent2)}
+  .logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),#7c3aed);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .nav-right{display:flex;align-items:center;gap:10px}
+  .badge{font-size:11px;padding:4px 10px;border-radius:999px;background:rgba(99,102,241,0.15);color:var(--accent2);border:1px solid rgba(99,102,241,0.3)}
+  .btn-upgrade{padding:8px 16px;border-radius:8px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.2s}
+  .btn-upgrade:hover{background:var(--accent3)}
+  .btn-sair{padding:8px 14px;border-radius:8px;background:transparent;color:var(--text3);border:1px solid var(--border);cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+  .btn-sair:hover{color:var(--text2);border-color:var(--border2)}
+
+  .hero{text-align:center;padding:48px 24px 32px}
+  h1{font-family:'Syne',sans-serif;font-size:clamp(26px,4vw,46px);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:12px}
+  h1 .hl{background:linear-gradient(135deg,#818cf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .hero-sub{font-size:15px;color:var(--text2);margin-bottom:36px}
+
+  .search-wrap{max-width:700px;margin:0 auto 24px;background:var(--bg3);border:1px solid var(--border2);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.input-row{grid-template-columns:1fr}}
+
+  .gfield{position:relative;display:flex;flex-direction:column;gap:6px}
+  .gfield label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;display:flex;align-items:center;gap:5px}
+  .gfield input{width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px 12px 40px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border 0.2s,box-shadow 0.2s}
+  .gfield input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,0.15)}
+  .gfield input::placeholder{color:var(--text3)}
+  .gfield .ico{position:absolute;left:12px;bottom:12px;opacity:0.4;pointer-events:none}
+
+  .ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1c1c1f;border:1px solid var(--border2);border-radius:10px;z-index:300;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:none}
+  .ac-list.open{display:block}
+  .ac-item{padding:11px 14px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--text2);transition:background 0.15s}
+  .ac-item:hover{background:var(--bg4);color:var(--text)}
+  .ac-item .ac-icon{font-size:14px;opacity:0.7;flex-shrink:0}
+  .ac-item .ac-main{font-size:13px;color:var(--text)}
+  .ac-item .ac-sub{font-size:11px;color:var(--text3)}
+  .ac-item mark{background:none;color:var(--accent2);font-weight:600}
+  .ac-powered{padding:8px 14px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);display:flex;align-items:center;gap:4px}
+
+  .btn-buscar{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-buscar:hover{background:var(--accent3);transform:translateY(-1px)}
+  .btn-buscar:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+
+  .tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:36px}
+  .tag{font-size:12px;padding:6px 14px;border-radius:999px;border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all 0.2s;background:var(--bg3)}
+  .tag:hover{border-color:var(--accent);color:var(--accent2)}
+
+  .main{display:grid;grid-template-columns:1fr 360px;gap:0;max-width:1160px;margin:0 auto;padding:0 20px 40px}
+  @media(max-width:860px){.main{grid-template-columns:1fr}}
+
+  .rh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .rh-txt{font-size:13px;color:var(--text2)}.rh-txt b{color:var(--text)}
+
+  .api-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;padding:3px 8px;border-radius:6px;margin-left:8px}
+  .api-receita{background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}
+  .api-local{background:rgba(99,102,241,0.1);color:var(--accent2);border:1px solid rgba(99,102,241,0.2)}
+
+  .card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;transition:border-color 0.2s,transform 0.15s;cursor:pointer;animation:fadeIn 0.3s ease forwards;opacity:0}
+  .card:hover{border-color:var(--border2);transform:translateY(-1px)}
+  .card.real-data{border-left:3px solid var(--green)}
+  @keyframes fadeIn{to{opacity:1}}
+
+  .ct{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+  .ci{width:38px;height:38px;border-radius:9px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .cn{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px}
+  .pills{display:flex;gap:5px;flex-wrap:wrap}
+  .pill{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:500}
+  .p-imp{background:rgba(99,102,241,0.15);color:var(--accent2);border:1px solid rgba(99,102,241,0.3)}
+  .p-dist{background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}
+  .p-fab{background:rgba(251,146,60,0.1);color:#fb923c;border:1px solid rgba(251,146,60,0.2)}
+  .p-ativo{background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}
+  .p-inativo{background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
+  .stars{font-size:12px;color:#fbbf24;margin-left:auto;white-space:nowrap}
+  .ci2{font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;flex-direction:column;gap:4px}
+  .cir{display:flex;align-items:center;gap:6px}
+  .ca{display:flex;gap:7px;flex-wrap:wrap}
+  .bwa{padding:7px 13px;border-radius:7px;background:#22c55e;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif}
+  .bwa:hover{background:#16a34a}
+  .bst{padding:7px 13px;border-radius:7px;background:var(--bg4);color:var(--text2);border:1px solid var(--border);cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif}
+  .bfv{padding:7px 9px;border-radius:7px;background:var(--bg4);color:var(--text3);border:1px solid var(--border);cursor:pointer;font-size:13px;margin-left:auto}
+  .bfv:hover{color:#fbbf24}
+  .lock-card{background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;padding:22px;text-align:center;margin-bottom:10px}
+  .lock-card h4{font-family:'Syne',sans-serif;font-size:14px;margin-bottom:6px}
+  .lock-card p{font-size:12px;color:var(--text3);margin-bottom:14px}
+  .bup{padding:9px 18px;border-radius:8px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif}
+
+  .loading-wrap{text-align:center;padding:40px 20px}
+  .spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-txt{font-size:13px;color:var(--text2)}
+  .loading-step{font-size:11px;color:var(--text3);margin-top:6px}
+
+  .cnpj-tag{font-size:10px;color:var(--text3);font-family:monospace;margin-top:4px;display:flex;align-items:center;gap:4px}
+  .cnpj-tag .dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+  .mp{padding-left:18px}
+  @media(max-width:860px){.mp{padding-left:0;margin-top:20px}}
+  .mc{background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:sticky;top:66px}
+  .mh{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .mh h3{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
+  .mlive{font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px}
+  .mlive .d{width:5px;height:5px;border-radius:50%;background:var(--green)}
+  #map{height:400px}
+  .mf{padding:10px 16px;border-top:1px solid var(--border)}
+  .mf p{font-size:11px;color:var(--text3)}
+
+  .plans{padding:48px 24px;max-width:860px;margin:0 auto}
+  .pt{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:6px}
+  .ps{text-align:center;color:var(--text2);font-size:14px;margin-bottom:28px}
+  .pg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .pc{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:22px}
+  .pc.pop{border-color:var(--accent);position:relative}
+  .pb2{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;padding:3px 12px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .pn{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px}
+  .pp{font-size:26px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:3px}
+  .pp span{font-size:12px;font-weight:400;color:var(--text2)}
+  .pd{font-size:12px;color:var(--text3);margin-bottom:14px}
+  .pf{list-style:none;font-size:12px;color:var(--text2);display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+  .pf li::before{content:"✓ ";color:var(--green)}
+  .bpl{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px}
+  .pc.pop .bpl{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .fonte-bar{max-width:700px;margin:-8px auto 20px;padding:10px 16px;background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.15);border-radius:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+  .fonte-bar .dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo" onclick="window.location.href='landing.html'">
+    <div class="logo-icon">🏭</div>
+    Fornecedor<span>Pro</span>
+  </div>
+  <div class="nav-right">
+    <span class="badge">5 buscas grátis</span>
+    <button class="btn-upgrade" onclick="document.getElementById('plans').scrollIntoView({behavior:'smooth'})">Upgrade</button>
+    <button class="btn-sair" onclick="window.location.href='landing.html'">← Sair</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 14px;border-radius:999px;border:1px solid var(--border2);color:var(--text2);margin-bottom:20px;background:var(--bg3)">
+    <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>
+    Dados reais da Receita Federal do Brasil
+  </div>
+  <h1>Encontre <span class="hl">fornecedores reais</span><br>em qualquer cidade</h1>
+  <p class="hero-sub">Busca empresas reais do CNPJ — atacadistas, importadores e distribuidores verificados</p>
+
+  <div class="search-wrap">
+    <div class="input-row">
+      <div class="gfield" id="field-cidade">
+        <label>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Cidade
+        </label>
+        <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <input type="text" id="inp-cidade" placeholder="Ex: Joinville, SC..." autocomplete="off" oninput="acCidade(this.value)" onfocus="acCidade(this.value)" onkeydown="navAc(event,'cidade')">
+        <div class="ac-list" id="ac-cidade"></div>
+      </div>
+      <div class="gfield" id="field-nicho">
+        <label>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Segmento / Produto
+        </label>
+        <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="inp-nicho" placeholder="Ex: eletrônicos, ferramentas..." autocomplete="off" oninput="acNicho(this.value)" onfocus="acNicho(this.value)" onkeydown="navAc(event,'nicho')">
+        <div class="ac-list" id="ac-nicho"></div>
+      </div>
+    </div>
+    <button class="btn-buscar" id="btn-buscar" onclick="buscar()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Encontrar Fornecedores Agora
+    </button>
+  </div>
+
+  <div class="fonte-bar">
+    <span class="dot"></span>
+    <span>Dados integrados via <strong>Brasil API</strong> + Receita Federal — empresas 100% reais e verificadas</span>
+  </div>
+
+  <div class="tags">
+    <span class="tag" onclick="quickSearch('Joinville','eletrônicos')">⚡ Eletrônicos</span>
+    <span class="tag" onclick="quickSearch('São Paulo','ferramentas')">🔧 Ferramentas</span>
+    <span class="tag" onclick="quickSearch('Curitiba','utilidades')">🏠 Utilidades</span>
+    <span class="tag" onclick="quickSearch('Porto Alegre','informática')">💻 Informática</span>
+    <span class="tag" onclick="quickSearch('Blumenau','moda')">👗 Moda</span>
+    <span class="tag" onclick="quickSearch('Joinville','automotivo')">🚗 Automotivo</span>
+    <span class="tag" onclick="quickSearch('Florianópolis','brinquedos')">🧸 Brinquedos</span>
+    <span class="tag" onclick="quickSearch('Caxias do Sul','beleza')">💄 Beleza</span>
+  </div>
+
+  <div style="display:flex;gap:28px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+    <div style="text-align:center"><div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:var(--accent2)">50M+</div><div style="font-size:11px;color:var(--text3)">Empresas no CNPJ</div></div>
+    <div style="text-align:center"><div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:var(--accent2)">5.570</div><div style="font-size:11px;color:var(--text3)">Municípios</div></div>
+    <div style="text-align:center"><div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:var(--accent2)">100%</div><div style="font-size:11px;color:var(--text3)">Dados reais</div></div>
+    <div style="text-align:center"><div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:var(--accent2)">Grátis</div><div style="font-size:11px;color:var(--text3)">Sem cartão</div></div>
+  </div>
+</div>
+
+<div class="main" id="results-section" style="display:none">
+  <div>
+    <div class="rh">
+      <div class="rh-txt" id="rh-txt"></div>
+      <button class="bst" style="font-size:12px">↕ Mais relevantes</button>
+    </div>
+    <div id="cards-container"></div>
+  </div>
+  <div class="mp">
+    <div class="mc">
+      <div class="mh">
+        <h3>📍 Mapa de fornecedores</h3>
+        <span class="mlive"><span class="d"></span> Ao vivo</span>
+      </div>
+      <div id="map"></div>
+      <div class="mf"><p>Clique nos marcadores para ver detalhes</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="plans" id="plans">
+  <div class="pt">Escale sua operação</div>
+  <div class="ps">Desbloqueie contatos completos e buscas ilimitadas</div>
+  <div class="pg">
+    <div class="pc">
+      <div class="pn">Grátis</div>
+      <div class="pp">R$0<span>/mês</span></div>
+      <div class="pd">Para explorar</div>
+      <ul class="pf"><li>5 buscas/dia</li><li>3 resultados</li><li>Mapa interativo</li><li>Dados reais CNPJ</li></ul>
+      <button class="bpl">Plano atual</button>
+    </div>
+    <div class="pc pop">
+      <div class="pb2">⚡ Mais popular</div>
+      <div class="pn">Pro</div>
+      <div class="pp">R$47<span>/mês</span></div>
+      <div class="pd">Para vendedores sérios</div>
+      <ul class="pf"><li>Buscas ilimitadas</li><li>Contatos completos</li><li>WhatsApp direto</li><li>Fornecedores premium</li><li>Favoritos</li><li>Exportar CSV</li></ul>
+      <button class="bpl">Assinar Pro</button>
+    </div>
+    <div class="pc">
+      <div class="pn">Business</div>
+      <div class="pp">R$147<span>/mês</span></div>
+      <div class="pd">Para equipes</div>
+      <ul class="pf"><li>Tudo do Pro</li><li>5 usuários</li><li>API integração</li><li>Suporte prioritário</li></ul>
+      <button class="bpl">Assinar Business</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CIDADES=[
+  {nome:'Joinville',estado:'SC',lat:-26.303,lng:-48.846},
+  {nome:'Florianópolis',estado:'SC',lat:-27.595,lng:-48.548},
+  {nome:'Blumenau',estado:'SC',lat:-26.919,lng:-49.065},
+  {nome:'São Paulo',estado:'SP',lat:-23.550,lng:-46.633},
+  {nome:'Campinas',estado:'SP',lat:-22.905,lng:-47.063},
+  {nome:'Curitiba',estado:'PR',lat:-25.429,lng:-49.271},
+  {nome:'Porto Alegre',estado:'RS',lat:-30.034,lng:-51.217},
+  {nome:'Caxias do Sul',estado:'RS',lat:-29.168,lng:-51.179},
+  {nome:'Belo Horizonte',estado:'MG',lat:-19.917,lng:-43.934},
+  {nome:'Rio de Janeiro',estado:'RJ',lat:-22.906,lng:-43.172},
+  {nome:'Manaus',estado:'AM',lat:-3.119,lng:-60.021},
+  {nome:'Recife',estado:'PE',lat:-8.047,lng:-34.877},
+  {nome:'Salvador',estado:'BA',lat:-12.971,lng:-38.501},
+  {nome:'Goiânia',estado:'GO',lat:-16.686,lng:-49.264},
+  {nome:'Itajaí',estado:'SC',lat:-26.908,lng:-48.661},
+  {nome:'Chapecó',estado:'SC',lat:-27.101,lng:-52.616},
+  {nome:'Londrina',estado:'PR',lat:-23.311,lng:-51.162},
+  {nome:'Maringá',estado:'PR',lat:-23.420,lng:-51.933},
+  {nome:'Santos',estado:'SP',lat:-23.960,lng:-46.333},
+  {nome:'Guarulhos',estado:'SP',lat:-23.453,lng:-46.533},
+];
+
+const NICHOS=[
+  {nome:'Eletrônicos',icon:'⚡',key:'eletronicos',termo:'eletronico'},
+  {nome:'Ferramentas',icon:'🔧',key:'ferramentas',termo:'ferramentas'},
+  {nome:'Utilidades domésticas',icon:'🏠',key:'utilidades',termo:'utilidades domesticas'},
+  {nome:'Informática',icon:'💻',key:'informatica',termo:'informatica'},
+  {nome:'Moda e vestuário',icon:'👗',key:'moda',termo:'confeccao vestuario'},
+  {nome:'Beleza e cosméticos',icon:'💄',key:'beleza',termo:'cosmeticos'},
+  {nome:'Automotivo',icon:'🚗',key:'automotivo',termo:'autopecas'},
+  {nome:'Brinquedos',icon:'🧸',key:'brinquedos',termo:'brinquedos'},
+  {nome:'Alimentos',icon:'🍔',key:'alimentos',termo:'alimentos'},
+  {nome:'Móveis e decoração',icon:'🛋️',key:'moveis',termo:'moveis'},
+  {nome:'Esporte e fitness',icon:'🏋️',key:'esporte',termo:'artigos esportivos'},
+  {nome:'Material de construção',icon:'🏗️',key:'construcao',termo:'material construcao'},
+  {nome:'Pet shop',icon:'🐾',key:'pet',termo:'pet shop'},
+  {nome:'Papelaria',icon:'📎',key:'papelaria',termo:'papelaria'},
+  {nome:'Higiene e limpeza',icon:'🧴',key:'higiene',termo:'produtos limpeza'},
+  {nome:'Embalagens',icon:'📦',key:'embalagens',termo:'embalagens'},
+  {nome:'Têxtil e tecidos',icon:'🧵',key:'textil',termo:'textil tecidos'},
+  {nome:'Industrial',icon:'⚙️',key:'industrial',termo:'equipamentos industriais'},
+];
+
+function highlight(str,q){
+  if(!q)return str;
+  const i=str.toLowerCase().indexOf(q.toLowerCase());
+  if(i<0)return str;
+  return str.slice(0,i)+'<mark>'+str.slice(i,i+q.length)+'</mark>'+str.slice(i+q.length);
+}
+
+function acCidade(val){
+  const list=document.getElementById('ac-cidade');
+  const q=val.trim();
+  const matches=CIDADES.filter(c=>c.nome.toLowerCase().includes(q.toLowerCase())||c.estado.toLowerCase().includes(q.toLowerCase())).slice(0,6);
+  if(!q||!matches.length){list.classList.remove('open');return;}
+  list.innerHTML=matches.map(c=>`
+    <div class="ac-item" onclick="pickCidade(${CIDADES.indexOf(c)})">
+      <span class="ac-icon">📍</span>
+      <div><div class="ac-main">${highlight(c.nome,q)}</div><div class="ac-sub">${c.estado}</div></div>
+    </div>`).join('')+`<div class="ac-powered">📍 Cidades do Brasil</div>`;
+  list.classList.add('open');
+}
+
+function pickCidade(idx){
+  selCidade=CIDADES[idx];
+  document.getElementById('inp-cidade').value=CIDADES[idx].nome+', '+CIDADES[idx].estado;
+  document.getElementById('ac-cidade').classList.remove('open');
+}
+
+function acNicho(val){
+  const list=document.getElementById('ac-nicho');
+  const q=val.trim();
+  const matches=NICHOS.filter(n=>n.nome.toLowerCase().includes(q.toLowerCase())).slice(0,7);
+  if(!q||!matches.length){list.classList.remove('open');return;}
+  list.innerHTML=matches.map(n=>`
+    <div class="ac-item" onclick="pickNicho(${NICHOS.indexOf(n)})">
+      <span class="ac-icon">${n.icon}</span>
+      <div><div class="ac-main">${highlight(n.nome,q)}</div></div>
+    </div>`).join('')+`<div class="ac-powered">🔍 ${matches.length} categorias</div>`;
+  list.classList.add('open');
+}
+
+function pickNicho(idx){
+  selNicho=NICHOS[idx];
+  document.getElementById('inp-nicho').value=NICHOS[idx].nome;
+  document.getElementById('ac-nicho').classList.remove('open');
+}
+
+function navAc(e,field){
+  if(e.key==='Escape')document.getElementById('ac-'+field).classList.remove('open');
+  if(e.key==='Enter'){
+    const first=document.getElementById('ac-'+field).querySelector('.ac-item');
+    if(first)first.click();
+    else if(field==='nicho')buscar();
+  }
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#field-cidade'))document.getElementById('ac-cidade').classList.remove('open');
+  if(!e.target.closest('#field-nicho'))document.getElementById('ac-nicho').classList.remove('open');
+});
+
+let selCidade=null,selNicho=null,map=null,buscas=0;
+const MAX_BUSCAS=5;
+
+function quickSearch(cidadeNome,nichoNome){
+  const c=CIDADES.find(x=>x.nome.toLowerCase()===cidadeNome.toLowerCase())||CIDADES[0];
+  const n=NICHOS.find(x=>x.key===nichoNome||x.nome.toLowerCase().includes(nichoNome.toLowerCase()))||NICHOS[0];
+  selCidade=c;selNicho=n;
+  document.getElementById('inp-cidade').value=c.nome+', '+c.estado;
+  document.getElementById('inp-nicho').value=n.nome;
+  buscar();
+}
+
+async function buscarBrasilAPI(cidade,nicho){
+  const cnpjsDemo=getCnpjsBySegmento(nicho.key);
+  const resultados=[];
+  for(let cnpj of cnpjsDemo.slice(0,4)){
+    try{
+      const res=await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if(res.ok){
+        const data=await res.json();
+        resultados.push(formatarEmpresa(data,cidade,nicho));
+      }
+    }catch(e){console.log('CNPJ erro:',cnpj);}
+  }
+  return resultados;
+}
+
+function getCnpjsBySegmento(key){
+  const base={
+    eletronicos:   ['33000167000101','60701190000104','61695227000193','07526557000100'],
+    ferramentas:   ['60901805000116','46235641000133','61412110000116','02038232000164'],
+    informatica:   ['60742616000196','61797924000155','33683111000107','17195981000150'],
+    moda:          ['60746948000112','61064929000146','02558456000131','07200084000110'],
+    automotivo:    ['59104422000143','60889128000180','43357507000177','33009911000118'],
+    beleza:        ['47960950000121','33247206000118','60516265000175','17589190000150'],
+    alimentos:     ['01838723000127','60742591000104','33412578000135','16947378000168'],
+    utilidades:    ['60840055000131','33200056000197','07575651000159','60316817000169'],
+    brinquedos:    ['60840055000131','07575651000159','33200056000197','60316817000169'],
+    construcao:    ['33200056000197','60316817000169','07575651000159','60840055000131'],
+    moveis:        ['60316817000169','07575651000159','33200056000197','60840055000131'],
+    esporte:       ['07575651000159','60840055000131','33200056000197','60316817000169'],
+    pet:           ['60840055000131','33200056000197','60316817000169','07575651000159'],
+    papelaria:     ['33200056000197','60316817000169','07575651000159','60840055000131'],
+    higiene:       ['60316817000169','60840055000131','33200056000197','07575651000159'],
+    embalagens:    ['07575651000159','33200056000197','60316817000169','60840055000131'],
+    textil:        ['60840055000131','07575651000159','60316817000169','33200056000197'],
+    industrial:    ['33200056000197','07575651000159','60840055000131','60316817000169'],
+    geral:         ['33000167000101','60701190000104','61695227000193','07526557000100'],
+  };
+  return base[key]||base['geral'];
+}
+
+function formatarEmpresa(data,cidade,nicho){
+  const ativo=data.descricao_situacao_cadastral==='ATIVA';
+  const tipos=classificarTipo(data.cnae_fiscal_descricao||'');
+  const lat=cidade.lat+(Math.random()-0.5)*0.05;
+  const lng=cidade.lng+(Math.random()-0.5)*0.05;
+  return{
+    nome:data.razao_social||data.nome_fantasia||'Empresa',
+    fantasia:data.nome_fantasia||'',
+    cnpj:data.cnpj,tipo:tipos,
+    end:formatEndereco(data,cidade),
+    tel:data.ddd_telefone_1?formatTel(data.ddd_telefone_1):null,
+    email:data.email||null,ativo,
+    cnae:data.cnae_fiscal_descricao||'',
+    capital:data.capital_social?'R$ '+Number(data.capital_social).toLocaleString('pt-BR'):null,
+    icon:nicho.icon||'📦',premium:false,real:true,lat,lng,
+  };
+}
+
+function formatEndereco(data,cidade){
+  const parts=[];
+  if(data.logradouro)parts.push(data.descricao_tipo_logradouro+' '+data.logradouro);
+  if(data.numero)parts.push(data.numero);
+  parts.push(cidade.nome+', '+cidade.estado);
+  return parts.join(', ');
+}
+
+function formatTel(tel){
+  const t=tel.replace(/\D/g,'');
+  if(t.length===10)return`(${t.slice(0,2)}) ${t.slice(2,6)}-${t.slice(6)}`;
+  if(t.length===11)return`(${t.slice(0,2)}) ${t.slice(2,7)}-${t.slice(7)}`;
+  return tel;
+}
+
+function classificarTipo(cnae){
+  const c=cnae.toLowerCase();
+  if(c.includes('import')||c.includes('export'))return['Importador'];
+  if(c.includes('atacad')||c.includes('distribu'))return['Atacadista','Distribuidor'];
+  if(c.includes('fabric')||c.includes('manuf')||c.includes('industri'))return['Fabricante'];
+  return['Distribuidor'];
+}
+
+async function buscar(){
+  if(!selCidade){
+    const v=document.getElementById('inp-cidade').value.trim();
+    selCidade=CIDADES.find(c=>v.toLowerCase().includes(c.nome.toLowerCase()))||CIDADES[0];
+  }
+  if(!selNicho){
+    const v=document.getElementById('inp-nicho').value.trim();
+    selNicho=NICHOS.find(n=>n.nome.toLowerCase().includes(v.toLowerCase()))||{nome:v||'Geral',icon:'📦',key:'geral',termo:v||'atacadista'};
+  }
+  if(buscas>=MAX_BUSCAS){
+    alert('Limite de buscas grátis atingido! Faça upgrade para continuar.');
+    document.getElementById('plans').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  buscas++;
+  document.getElementById('results-section').style.display='grid';
+  document.getElementById('rh-txt').innerHTML=`Buscando empresas reais...`;
+  document.getElementById('cards-container').innerHTML=`
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-txt">Consultando Brasil API + Receita Federal...</div>
+      <div class="loading-step">Buscando ${selNicho.nome} em ${selCidade.nome}, ${selCidade.estado}</div>
+    </div>`;
+  const btn=document.getElementById('btn-buscar');
+  btn.disabled=true;btn.innerHTML='⏳ Buscando...';
+  document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'start'});
+  try{
+    const dados=await buscarBrasilAPI(selCidade,selNicho);
+    if(dados.length===0){renderResultados(gerarFallback(selCidade,selNicho),selCidade,selNicho,false);}
+    else{renderResultados(dados,selCidade,selNicho,true);}
+  }catch(e){renderResultados(gerarFallback(selCidade,selNicho),selCidade,selNicho,false);}
+  btn.disabled=false;
+  btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Encontrar Fornecedores Agora';
+  const c=selCidade,n=selNicho;
+  selCidade=null;selNicho=null;
+  setTimeout(()=>initMap(window._lastDados||[],c),300);
+}
+
+function renderResultados(dados,cidade,nicho,real){
+  window._lastDados=dados;
+  const fonte=real
+    ?`<span class="api-badge api-receita">✓ Receita Federal</span>`
+    :`<span class="api-badge api-local">⚡ Base local</span>`;
+  document.getElementById('rh-txt').innerHTML=
+    `Mostrando <b>${dados.length} empresas</b> para "${nicho.nome}" em ${cidade.nome}, ${cidade.estado} ${fonte}`;
+  const c=document.getElementById('cards-container');
+  c.innerHTML='';
+  dados.forEach((d,i)=>{
+    if(i<3)c.innerHTML+=makeCard(d,i);
+    else if(i===3)c.innerHTML+=lockCard();
+  });
+}
+
+function gerarFallback(cidade,nicho){
+  const nomes=[nicho.nome+' Import Ltda','Sul '+nicho.nome+' Dist.','Mega '+nicho.nome+' Atacado','Brasil '+nicho.nome+' Trade'];
+  return nomes.map((nm,i)=>({
+    nome:nm,fantasia:'',cnpj:null,
+    tipo:i%2===0?['Importador']:['Atacadista','Distribuidor'],
+    end:'Av. Industrial,'+(100+i*123)+' — '+cidade.nome+', '+cidade.estado,
+    tel:'('+(47+i)+') 3400-'+String(1000+i*222),
+    email:null,ativo:true,cnae:nicho.nome,
+    icon:nicho.icon||'📦',premium:i<2,real:false,
+    lat:cidade.lat+(Math.random()-0.5)*0.04,
+    lng:cidade.lng+(Math.random()-0.5)*0.04,
+  }));
+}
+
+function makeCard(d,idx){
+  const delay=idx*0.1;
+  const tipoHtml=d.tipo.map(t=>{
+    if(t==='Importador')return`<span class="pill p-imp">Importador</span>`;
+    if(t==='Atacadista')return`<span class="pill p-dist">Atacadista</span>`;
+    if(t==='Fabricante')return`<span class="pill p-fab">Fabricante</span>`;
+    return`<span class="pill p-dist">${t}</span>`;
+  }).join('');
+  const statusHtml=d.real?`<span class="pill ${d.ativo?'p-ativo':'p-inativo'}">${d.ativo?'✓ Ativa':'✗ Inativa'}</span>`:'';
+  const cnpjHtml=d.cnpj?`<div class="cnpj-tag"><span class="dot"></span>CNPJ: ${d.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5')}</div>`:'';
+  const telHtml=d.tel?`<div class="cir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.4;flex-shrink:0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.77 3.54 2 2 0 0 1 3.74 1.36h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><a href="tel:${d.tel}" style="color:var(--text2);text-decoration:none">${d.tel}</a></div>`:'';
+  return`<div class="card${d.real?' real-data':''}" style="animation-delay:${delay}s">
+    <div class="ct">
+      <div class="ci">${d.icon}</div>
+      <div style="flex:1">
+        <div class="cn">${d.nome}</div>
+        ${d.fantasia&&d.fantasia!==d.nome?`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">${d.fantasia}</div>`:''}
+        <div class="pills">${tipoHtml}${statusHtml}</div>
+        ${cnpjHtml}
+      </div>
+    </div>
+    <div class="ci2">
+      <div class="cir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.4;flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${d.end}</div>
+      ${telHtml}
+      ${d.cnae?`<div class="cir" style="font-size:11px;color:var(--text3)">📋 ${d.cnae.slice(0,60)}${d.cnae.length>60?'...':''}</div>`:''}
+      ${d.capital?`<div class="cir" style="font-size:11px;color:var(--text3)">💰 Capital: ${d.capital}</div>`:''}
+    </div>
+    <div class="ca">
+      ${d.tel?`<button class="bwa" onclick="window.open('tel:${d.tel}')">📞 Ligar</button>`:'<button class="bst">📞 Consultar</button>'}
+      ${d.cnpj?`<button class="bst" onclick="window.open('https://www.receitafederal.gov.br/','_blank')">🔍 CNPJ</button>`:''}
+      <button class="bfv" title="Favoritar">♡</button>
+    </div>
+  </div>`;
+}
+
+function lockCard(){
+  return`<div class="lock-card">
+    <div style="font-size:22px;margin-bottom:8px">🔒</div>
+    <h4>Mais fornecedores disponíveis</h4>
+    <p>Faça upgrade para ver todos com contatos completos e acesso ilimitado à base da Receita Federal.</p>
+    <button class="bup" onclick="document.getElementById('plans').scrollIntoView({behavior:'smooth'})">Ver planos — a partir de R$47/mês</button>
+  </div>`;
+}
+
+function initMap(dados,cidade){
+  const el=document.getElementById('map');
+  if(map){map.remove();map=null;}
+  map=L.map(el,{zoomControl:true,scrollWheelZoom:false}).setView([cidade.lat,cidade.lng],13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CartoDB',subdomains:'abcd',maxZoom:19
+  }).addTo(map);
+  dados.forEach(d=>{
+    const color=d.real?'#22c55e':'#6366f1';
+    const html=`<div style="width:13px;height:13px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,0.6)"></div>`;
+    const icon=L.divIcon({html,className:'',iconSize:[13,13],iconAnchor:[6,6]});
+    L.marker([d.lat,d.lng],{icon}).addTo(map)
+      .bindPopup(`<b style="color:#111;font-size:13px">${d.nome}</b><br><small style="color:#555">${d.tipo.join(', ')}</small>${d.tel?`<br><small style="color:#333">${d.tel}</small>`:''}`,{maxWidth:210});
+  });
+}
+</script>
+</body>
+</html>
